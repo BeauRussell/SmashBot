@@ -1,24 +1,25 @@
 const WebSocket = require('ws');
 const request = require('request');
 const getParser = require('@streammedev/parse-message');
+const eachOfSeries = require('async/eachOfSeries');
 
-const botKey = 'ADD THE BOT KEY';
-const botSecret = 'ADD THE BOT SECRET';
+const botKey = '3d2da48b-b7fc-4178-9db3-e19a6cdbecad';
+const botSecret = '082e125617ad4d509b63ba1aac022373f0b933f3c19114b6';
 
-const publicId = 'ADD THE PUBLIC ID OF THE CHANNEL';
-var roomId = `user:${publicId}:web`;
+const publicId = '9fcd602d-b5fa-47d8-a434-068779173352';
+const roomId = `user:${publicId}:web`;
 
 const secondsInMS = 1000;
-const minutesInMS = seconds * 60;
-const hoursInMS = minutes * 60;
-const daysInMS = hours * 24;
-const monthsInMS = days * 30;
-const yearsInMS = days * 365;
+const minutesInMS = secondsInMS * 60;
+const hoursInMS = minutesInMS * 60;
+const daysInMS = hoursInMS * 24;
+const monthsInMS = daysInMS * 30;
+const yearsInMS = daysInMS * 365;
 
 function botAuth (cb) {
 	request({
 		method: 'POST',
-		url: 'https://stream.me/api-auth/v1/login-bot',
+		url: 'https://www.stream.me/api-auth/v1/login-bot',
 		body: {
 			key: botKey,
 			secret: botSecret
@@ -61,44 +62,96 @@ getParser(roomId, function (err, parseMessage) {
 			openWS();
 
 			const commands = {
-				'!bot': 'You can start to set up your own chat bot by visiting AWAITING URL',
 				'!emotes': 'Upload your own emotes! https://www.stream.me/settings/chat',
 				'!flip': '(╯°□°）╯︵ ┻━┻',
 				'!fix': '┬──┬ ノ( ゜-゜ノ)',
-				'!contest': 'View my rank on the Top Streamer Leaderboard! https://www.stream.me/contest',
+				'!ws': 'I respect your warrior skills Frogger',
+				'!upcoming': upcoming,
 				'!followage': followAge,
 				'!uptime': uptime,
-				'!coinflip': coinflip,
-				'!title': title
+				'!coinflip': coinflip
 			};
 
 			function parse (data) {
 				const message = parseMessage(data);
-				const role = message.actor.role;
-				let chat = message.message;
-				const spaceIndex = chat.indexOf(' ');
-				let changes;
-				if (spaceIndex !== -1) {
-					chat = chat.slice(0, spaceIndex);
-					changes = message.message.slice(spaceIndex + 1);
-				}
-				console.log(message);
+				const chat = message.message;
 				if (chat in commands) {
-					responds(chat, message.actor.slug, changes, role);
+					responds(chat, message.actor.slug);
 				}
 			}
 
-			function responds (key, userSlug, changes, role) {
+			function responds (key, userSlug) {
 				if (typeof commands[key] === 'string') {
 					sendMessage(commands[key]);
 				} else {
-					commands[key](userSlug, changes, role);
+					commands[key](userSlug);
 				}
 			}
 
-			function followAge (userSlug, changes, role) {
+			function upcoming(userSlug) {
 				request({
-					url: `https://stream.me/api-user/v2/${userSlug}/follow/${channelSlug}`,
+					url: 'https://api.smash.gg/station_queue/57881',
+					json: true
+				}, function(err, res, body) {
+					if (err) {
+						console.log(err);
+						return;
+					}
+					if (res.statusCode === 404) {
+						sendMessage('The match queue for this week is not currently live.');
+						return;
+					}
+					let upcomingMatches = body.data.entities.sets;
+					if (upcomingMatches.length > 4) {
+						upcomingMatches = upcomingMatches.slice(0,3);
+					}
+					if (!Array.isArray(upcomingMatches)) {
+						sendMessage('This is currently the only match in the stream queue');
+						return;
+					}
+					eachOfSeries(upcomingMatches, function(match, key, cb) {
+						const index = key + 1;
+						var matchString = 'Upcoming Match #' + index + ': ';
+						request({
+							url: `https://api.smash.gg/entrant/${match.entrant1Id}`,
+							json: true
+						}, function(err, res, body) {
+							if (err) {
+								console.log('Error accessing endpoint for match ' + key + ' entrantId' + match.entrant1Id);
+								console.log(err);
+								return cb();
+							}
+							if (res.statusCode === 404) {
+								matchString += 'TBD vs. ';
+							} else {
+								matchString += body.entities.player[0].gamerTag + ' vs. ';
+							}
+							request({
+								url: `https://api.smash.gg/entrant/${match.entrant2Id}`,
+								json: true
+							}, function(err, res, body) {
+								if (err) {
+									console.log('Error accessing endpoint for match ' + key + ' entrantId' + match.entrant2Id);
+									console.log(err);
+									return cb();
+								}
+								if (res.statusCode === 404) {
+									matchString += 'TBD';
+								} else {
+									matchString += body.entities.player[0].gamerTag;
+								}
+								//TODO: rate limit this call so you don't hit the limit and lose messages
+								sendMessage(matchString);
+								cb();
+							});
+						});
+					});
+				});
+			}
+
+			function followAge (userSlug) {
+				request({
+					url: `https://www.stream.me/api-user/v2/${userSlug}/follow/${channelSlug}`,
 					json: true
 				}, function (err, res, body) {
 					if (err) {
@@ -117,9 +170,9 @@ getParser(roomId, function (err, parseMessage) {
 				});
 			}
 
-			function uptime (userSlug, changes, role) {
+			function uptime (userSlug) {
 				request({
-					url: `https://stream.me/api-channel/v1/channels?publicIds=${publicId}`,
+					url: `https://www.stream.me/api-channel/v1/channels?publicIds=${publicId}`,
 					json: true
 				}, function (err, res, body) {
 					if (err) {
@@ -137,7 +190,7 @@ getParser(roomId, function (err, parseMessage) {
 				});
 			}
 
-			function coinflip (userSlug, changes, role) {
+			function coinflip (userSlug) {
 				if (Math.random() > 0.5) {
 					sendMessage('Heads!');
 				} else {
@@ -206,7 +259,7 @@ getParser(roomId, function (err, parseMessage) {
 			function sendMessage (sendMessage) {
 				request({
 					method: 'POST',
-					url: `https://stream.me/api-commands/v1/room/${roomId}/command/say`,
+					url: `https://www.stream.me/api-commands/v1/room/${roomId}/command/say`,
 					json: true,
 					headers: {
 						Authorization: `Bearer ${token}`
@@ -226,9 +279,8 @@ getParser(roomId, function (err, parseMessage) {
 			}
 
 			function openWS () {
-				var ws = new WebSocket('wss://stream.me/api-rooms/v3/ws');
+				var ws = new WebSocket('wss://www.stream.me/api-rooms/v3/ws');
 				ws.on('open', function open () {
-					// TODO: template roomId
 					ws.send(`chat {"action":"join","room":"${roomId}"}`);
 				});
 
