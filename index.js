@@ -6,7 +6,7 @@ const eachOfSeries = require('async/eachOfSeries');
 const botKey = '3d2da48b-b7fc-4178-9db3-e19a6cdbecad';
 const botSecret = '082e125617ad4d509b63ba1aac022373f0b933f3c19114b6';
 
-const publicId = '9fcd602d-b5fa-47d8-a434-068779173352';
+const publicId = 'b18253c2-a588-4273-883c-83a19060ca3a';
 const roomId = `user:${publicId}:web`;
 
 const secondsInMS = 1000;
