@@ -63,9 +63,11 @@ getParser(roomId, function (err, parseMessage) {
 
 			const commands = {
 				'!emotes': 'Upload your own emotes! https://www.stream.me/settings/chat',
-				'!flip': '(╯°□°）╯︵ ┻━┻',
-				'!fix': '┬──┬ ノ( ゜-゜ノ)',
+				'!tableflip': '(╯°□°）╯︵ ┻━┻',
+				'!tablefix': '┬──┬ ノ( ゜-゜ノ)',
 				'!ws': 'I respect your warrior skills Frogger',
+				'!commands': '!coinflip, !emotes, !followage, !frogger, !tablefix, !tableflip, !upcoming, !uptime',
+				'!frogger': 'Frogger Frogger Frogger',
 				'!upcoming': upcoming,
 				'!followage': followAge,
 				'!uptime': uptime,
